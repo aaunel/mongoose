@@ -125,6 +125,83 @@ describe('model: populate:', function(){
     });
   });
 
+  it('not failing on null as ref', function(done) {
+    var db = start()
+      , BlogPost = db.model('RefBlogPost', posts);
+
+    BlogPost.create({
+        title     : 'woot'
+      , _creator  : null
+    }, function (err, post) {
+      assert.ifError(err);
+
+      BlogPost
+      .findById(post._id)
+      .populate('_creator')
+      .exec(function (err, post) {
+        assert.ifError(err);
+
+        assert.equal(post._creator, null);
+        db.close(done);
+      });
+    });
+  });
+
+  it('not failing on empty object as ref', function(done) {
+    var db = start()
+      , BlogPost = db.model('RefBlogPost', posts);
+
+    BlogPost.create({
+        title     : 'woot'
+      , _creator  : {}
+    }, function (err, post) {
+      assert.ifError(err);
+
+      BlogPost
+      .findById(post._id)
+      .populate('_creator')
+      .exec(function (err, post) {
+        assert.ifError(err);
+
+        assert.equal(post._creator, {});
+        db.close(done);
+      });
+    });
+  });
+
+  it('across DBs', function(done) {
+    var db = start()
+      , db2 = db.useDb('mongoose_test2')
+      , BlogPost = db.model('RefBlogPost', posts + '2')
+      , User = db2.model('RefUser', users + '2');
+
+    User.create({
+      name: 'Guillermo'
+      , email: 'rauchg@gmail.com'
+    }, function (err, creator) {
+      assert.ifError(err);
+
+      BlogPost.create({
+        title    : 'woot'
+        , _creator : creator._id
+      }, function (err, post) {
+        assert.ifError(err);
+        BlogPost
+        .findById(post._id)
+        .populate('_creator', 'name', User)
+        .exec(function (err, post) {
+          db2.db.dropDatabase(function() {
+            db.close();
+            db2.close();
+            assert.ifError(err);
+            assert.ok(post._creator.name == 'Guillermo');
+            done();
+          })
+        });
+      });
+    })
+  })
+
   it('an error in single ref population propagates', function(done){
     var db = start()
       , BlogPost = db.model('RefBlogPost', posts + '1')
