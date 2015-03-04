@@ -169,7 +169,7 @@ describe('model: populate:', function(){
         .exec(function (err, post) {
           assert.ifError(err);
 
-          assert.equal(post._creator, {});
+          assert.equal(post._creator, undefined);
           db.close(done);
         });
       });
